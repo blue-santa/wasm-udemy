@@ -1,0 +1,50 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Webassembly Demo</title>
+    </head>
+
+    <body>
+        <h1>Webassembly Demo</h1>
+    <script>
+
+        // Initialize wasm with custom memory
+        const wasmMemory = new WebAssembly.Memory({ initial: 2 })
+
+        // Read a string out of WebAssembly's memory
+        const readMemStr = ( offset, length ) => {
+            const strBuffer = new Uint8Array(wasmMemory.buffer, offset, length);
+            const str = new TextDecoder().decode(strBuffer)
+            // Notify and make use of new string
+            window.dispatchEvent( new CustomEvent('wasmValue', (detail: str)) )
+        })
+
+        // Listen for new string
+        windows.addEventListener('wasmValue', str => {
+            console.log('Receive a new string from C:', str.detail)
+        }) 
+
+        // Import objects
+        const imports = {
+            env: {
+                numLog: console.log,
+                strLog: readMemStr,
+                memory: wasmMemory
+            }
+        }
+
+        // Load WASM
+        WebAssembly.instantiateStreaming( fetch('/program.wasm'), imports )
+            .then( wasm => {
+                console.log('WASM Ready.');
+                
+                // Make WASM object available
+                window.wasm = wasm
+
+                // Log out all exported functions
+                console.log( WebAssembly.Module.imports( wasm.module ) )
+                
+            }) 
+    </script>
+    </body>
+</html>
